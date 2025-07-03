@@ -1,0 +1,44 @@
+name: Auto Release Mihomo Smart arm64
+
+on:
+  schedule:
+    # 每天凌晨 4 点（北京时间），等于 UTC 的 20:00 前一天
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+
+jobs:
+  auto-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq gh
+
+      - name: Authenticate gh CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Fetch asset URL from Prerelease-Alpha
+        id: fetch
+        run: |
+          API_URL="https://api.github.com/repos/vernesong/mihomo/releases/tags/Prerelease-Alpha"
+          JSON=$(curl -s "$API_URL")
+
+          DOWNLOAD_URL=$(echo "$JSON" | jq -r '.assets[] 
+            | select(.name | test("^mihomo-linux-arm64-alpha-smart-.*\\.gz$")) 
+            | .browser_download_url')
+
+          echo "Download URL: $DOWNLOAD_URL"
+          echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> $GITHUB_ENV
+
+      - name: Download asset
+        run: |
+          curl -L -o mihomo-linux-arm64-alpha-smart.gz "$DOWNLOAD_URL"
+
+      - name: Create release with current date tag
+        run: |
+          gh release upload nightly --clobber mihomo-linux-arm64-alpha-smart.gz
