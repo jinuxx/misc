@@ -28,6 +28,10 @@ jobs:
           API_URL="https://api.github.com/repos/vernesong/mihomo/releases/tags/Prerelease-Alpha"
           JSON=$(curl -s "$API_URL")
 
+          ORIGIN_NAME=$(echo "$JSON" | jq -r '.assets[] 
+            | select(.name | test("^mihomo-linux-arm64-alpha-smart-.*\\.gz$")) 
+            | .name')
+
           DOWNLOAD_URL=$(echo "$JSON" | jq -r '.assets[] 
             | select(.name | test("^mihomo-linux-arm64-alpha-smart-.*\\.gz$")) 
             | .browser_download_url')
@@ -37,8 +41,10 @@ jobs:
 
       - name: Download asset
         run: |
-          curl -L -o mihomo-linux-arm64-alpha-smart.gz "$DOWNLOAD_URL"
+          curl -L -o "$ORIGIN_NAME" "$DOWNLOAD_URL"
+          cp "ORIGIN_NAME" mihomo-linux-arm64-alpha-smart.gz
 
       - name: Create release with current date tag
         run: |
+          gh release upload nightly --clobber "$ORIGIN_NAME"
           gh release upload nightly --clobber mihomo-linux-arm64-alpha-smart.gz
