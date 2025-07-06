@@ -38,14 +38,14 @@ jobs:
 
           echo "Name: $ORIGIN_NAME"
           echo "Download URL: $DOWNLOAD_URL"
-          
+
           echo "ORIGIN_NAME=$ORIGIN_NAME" >> $GITHUB_ENV
           echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> $GITHUB_ENV
 
       - name: Download asset
         run: |
           curl -L -o "$ORIGIN_NAME" "$DOWNLOAD_URL"
-          cp "ORIGIN_NAME" mihomo-linux-arm64-alpha-smart.gz
+          cp "$ORIGIN_NAME" mihomo-linux-arm64-alpha-smart.gz
 
       - name: Create release with current date tag
         run: |
