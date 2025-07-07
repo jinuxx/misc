@@ -42,6 +42,15 @@ jobs:
           echo "ORIGIN_NAME=$ORIGIN_NAME" >> $GITHUB_ENV
           echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> $GITHUB_ENV
 
+      - name: Check if asset already exists in nightly release
+        id: check_asset
+        run: |
+          EXISTING=$(gh release view nightly --json assets -q ".assets[].name" | grep -Fx "$ORIGIN_NAME" || true)
+          if [ -n "$EXISTING" ]; then
+            echo "Asset $ORIGIN_NAME already exists in nightly release. Exiting..."
+            exit 0
+          fi
+
       - name: Download asset
         run: |
           curl -L -o "$ORIGIN_NAME" "$DOWNLOAD_URL"
