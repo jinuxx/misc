@@ -2,8 +2,8 @@ name: Auto Release Mihomo Smart arm64
 
 on:
   schedule:
-    # 每天凌晨 4 点（北京时间），等于 UTC 的 20:00 前一天
-    - cron: "0 20 * * *"
+    # 每天凌晨 5 点（北京时间），等于 UTC 的 21:00 前一天
+    - cron: "0 21 * * *"
   workflow_dispatch:
 
 jobs:
@@ -45,18 +45,21 @@ jobs:
       - name: Check if asset already exists in nightly release
         id: check_asset
         run: |
-          EXISTING=$(gh release view nightly --json assets -q ".assets[].name" | grep -Fx "$ORIGIN_NAME" || true)
-          if [ -n "$EXISTING" ]; then
-            echo "Asset $ORIGIN_NAME already exists in nightly release. Exiting..."
-            exit 0
+          EXISTS=$(gh release view nightly --json assets -q ".assets[].name" | grep -Fx "$ORIGIN_NAME" || true)
+          if [ -n "$EXISTS" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Download asset
+        if: steps.check_asset.outputs.found == 'false'
         run: |
           curl -L -o "$ORIGIN_NAME" "$DOWNLOAD_URL"
           cp "$ORIGIN_NAME" mihomo-linux-arm64-alpha-smart.gz
 
       - name: Create release with current date tag
+        if: steps.check_asset.outputs.found == 'false'
         run: |
           gh release upload nightly --clobber "$ORIGIN_NAME"
           gh release upload nightly --clobber mihomo-linux-arm64-alpha-smart.gz
