@@ -1,0 +1,65 @@
+name: GeoIP Dat Build
+on:
+  workflow_dispatch:
+  schedule:
+    # 每天凌晨 5:10（北京时间），等于 UTC 的 21:10 前一天
+    - cron: "10 21 * * *"
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout codebase
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq gh
+
+      - name: Authenticate gh CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Checkout geoip repo
+        run: gh repo clone Loyalsoldier/geoip
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ./geoip/go.mod
+          cache-dependency-path: ./geoip/go.sum
+
+      - name: Build geoip files
+        run: |
+          mv ./geoip-config.json geoip/config.json && cd geoip
+          go build ./
+          ./geoip convert -c ./config.json
+
+      - name: Create release with current date tag
+        run: |
+          mv geoip/output/geoip-only-cn-telegram-private.dat ./
+          cp ./geoip-only-cn-telegram-private.dat ./geoip-only-cn-telegram-private-$(date +%Y%m%d).dat
+          gh release upload geoip --clobber ./geoip-only-cn-telegram-private-$(date +%Y%m%d).dat
+          gh release upload geoip --clobber ./geoip-only-cn-telegram-private.dat
+
+      - name: Clean up old assets in release
+        run: |
+          TAG=geoip
+          # Get all assets for the geoip tag, sorted by created_at (newest first)
+          assets=$(gh api repos/{owner}/{repo}/releases/tags/$TAG --jq '.assets | sort_by(.created_at) | reverse')
+          
+          # Count total assets
+          asset_count=$(echo "$assets" | jq length)
+          
+          # If more than 8 assets, delete the oldest ones
+          if [ "$asset_count" -gt 8 ]; then
+            echo "Found $asset_count assets, keeping newest 8, deleting the rest"
+            echo "$assets" | jq -r '.[8:][] | .name' | while read -r asset_name; do
+              echo "Deleting asset name: $asset_name"
+              gh release delete-asset $TAG "$asset_name" -y
+            done
+          else
+            echo "Found $asset_count assets (8 or fewer), no assets will be deleted"
+          fi
