@@ -1,4 +1,4 @@
-name: Auto Release Mihomo Smart arm64
+name: Auto Update Mihomo Smart arm64
 
 on:
   schedule:
@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install dependencies
         run: |
@@ -42,10 +44,10 @@ jobs:
           echo "ORIGIN_NAME=$ORIGIN_NAME" >> $GITHUB_ENV
           echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> $GITHUB_ENV
 
-      - name: Check if asset already exists in nightly release
+      - name: Check if asset already exists in mihomo release
         id: check_asset
         run: |
-          EXISTS=$(gh release view nightly --json assets -q ".assets[].name" | grep -Fx "$ORIGIN_NAME" || true)
+          EXISTS=$(gh release view mihomo --json assets -q ".assets[].name" | grep -Fx "$ORIGIN_NAME" || true)
           if [ -n "$EXISTS" ]; then
             echo "found=true" >> $GITHUB_OUTPUT
           else
@@ -61,5 +63,5 @@ jobs:
       - name: Create release with current date tag
         if: steps.check_asset.outputs.found == 'false'
         run: |
-          gh release upload nightly --clobber "$ORIGIN_NAME"
-          gh release upload nightly --clobber mihomo-linux-arm64-alpha-smart.gz
+          gh release upload mihomo --clobber "$ORIGIN_NAME"
+          gh release upload mihomo --clobber mihomo-linux-arm64-alpha-smart.gz
