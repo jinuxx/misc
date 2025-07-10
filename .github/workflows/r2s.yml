@@ -25,4 +25,4 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           cp ../r2s.config ./.config
-          make -j1 defconfig download clean world
+          make -j$(nproc)
