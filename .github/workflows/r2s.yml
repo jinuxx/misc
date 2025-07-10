@@ -21,7 +21,7 @@ jobs:
           git clone https://git.openwrt.org/openwrt/openwrt.git
           cd openwrt
           git pull 
-          git checkout openwrt-24.10.2
+          git checkout v24.10.1
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           cp ../r2s.config ./.config
