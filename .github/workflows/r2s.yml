@@ -29,5 +29,5 @@ jobs:
           echo "---- 3"
           cp ../r2s.config ./.config
           echo "---- 4"
-          make -j$(nproc)
+          make -j$(nproc) defconfig download clean world
           echo "---- 5"
