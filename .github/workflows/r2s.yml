@@ -1,0 +1,38 @@
+name: r2s build openwrt
+
+on:
+  workflow_dispatch:
+    inputs:
+      openwrt_branch:
+        description: 'OpenWrt Branch to build'     
+        required: true
+        default: '24.10.1'
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install build-essential file libncurses-dev zlib1g-dev gawk git
+          sudo apt install gettext libssl-dev xsltproc rsync wget unzip python3 python3-distutils
+
+      - name: Prepare env and builder
+        run: |
+          wget https://archive.openwrt.org/releases/24.10.1/targets/rockchip/armv8/openwrt-imagebuilder-${{ github.event.inputs.openwrt_branch }}-rockchip-armv8.Linux-x86_64.tar.zst
+          tar --zstd -xvf openwrt-imagebuilder-*.tar.zst
+
+      - name: Build firmware
+        run: |
+          cd openwrt-imagebuilder-*/
+          make image PROFILE="friendlyarm_nanopi-r2s"
+      
+      - name: Show firmware
+        run: |
+          cd openwrt-imagebuilder-*/
+          ls ./bin/targets/rockchip/generic
