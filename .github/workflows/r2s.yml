@@ -1,0 +1,59 @@
+name: r2s build openwrt
+
+on:
+  workflow_dispatch:
+    inputs:
+      openwrt_branch:
+        description: 'OpenWrt Verison to build'     
+        required: true
+        default: '24.10'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential clang flex bison g++ gawk aria2 gh \
+              gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev \
+              python3-setuptools rsync swig unzip zlib1g-dev file wget python3-pyelftools
+      
+      - name: pull code
+        run: |
+          git clone --branch openwrt-24.10 --depth 1 https://git.openwrt.org/openwrt/openwrt.git
+
+      - name: Prepare feed for make config
+        run: |
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          
+          # turboacc
+          curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh --no-sfe
+          
+          # 合并配置
+          cp ../r2s/* ./
+          make defconfig
+
+      - name: Make download with aria2
+        run: |
+          cd openwrt
+          make -j $(($(nproc)+1)) download DLAGENTS="https https = /usr/bin/aria2c -c -x 16 -s 16 -k 1M"
+
+      - name: Make World
+        run: |
+          cd openwrt
+          make -j $(($(nproc)+1)) V=s
+
+      - name: Authenticate gh CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Create release with current date tag
+        run: |
+          mv openwrt/bin/targets/rockchip/armv8/*.gz ./
+          gh release upload release --clobber ./*.gz
