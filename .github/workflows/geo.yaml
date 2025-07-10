@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -42,24 +42,24 @@ jobs:
           mv geoip/output/geoip-only-cn-telegram-private.dat ./
           cp ./geoip-only-cn-telegram-private.dat ./geoip-only-cn-telegram-private-$(date +%Y%m%d).dat
           gh release upload geoip --clobber ./geoip-only-cn-telegram-private-$(date +%Y%m%d).dat
-          gh release upload geoip --clobber ./geoip-only-cn-telegram-private.dat
+          gh release upload release --clobber ./geoip-only-cn-telegram-private.dat
 
       - name: Clean up old assets in release
         run: |
           TAG=geoip
           # Get all assets for the geoip tag, sorted by created_at (newest first)
           assets=$(gh api repos/{owner}/{repo}/releases/tags/$TAG --jq '.assets | sort_by(.created_at) | reverse')
-          
+
           # Count total assets
           asset_count=$(echo "$assets" | jq length)
-          
-          # If more than 8 assets, delete the oldest ones
-          if [ "$asset_count" -gt 8 ]; then
-            echo "Found $asset_count assets, keeping newest 8, deleting the rest"
-            echo "$assets" | jq -r '.[8:][] | .name' | while read -r asset_name; do
+
+          # If more than 5 assets, delete the oldest ones
+          if [ "$asset_count" -gt 5 ]; then
+            echo "Found $asset_count assets, keeping newest 5, deleting the rest"
+            echo "$assets" | jq -r '.[5:][] | .name' | while read -r asset_name; do
               echo "Deleting asset name: $asset_name"
               gh release delete-asset $TAG "$asset_name" -y
             done
           else
-            echo "Found $asset_count assets (8 or fewer), no assets will be deleted"
+            echo "Found $asset_count assets (5 or fewer), no assets will be deleted"
           fi

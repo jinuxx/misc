@@ -1,0 +1,59 @@
+name: R2S OpenWrt Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential clang flex bison g++ gawk aria2 gh \
+              gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev \
+              python3-setuptools rsync swig unzip zlib1g-dev file wget python3-pyelftools
+
+      - name: Pull code
+        run: |
+          git clone --branch openwrt-${{ vars.BRANCH }} --depth 1 https://git.openwrt.org/openwrt/openwrt.git
+
+      - name: Prepare feed for make config
+        run: |
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+          # turboacc
+          curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh --no-sfe
+
+          # 合并配置
+          cp -a ../r2s/. ./
+          sed -i "s/FRP_TOKEN/${{ secrets.FRP_TOKEN }}/g" files/etc/config/frpc
+          sed -i "s/PPPOE_USERNAME/${{ secrets.PPPOE_USERNAME }}/g" files/etc/config/network
+          sed -i "s/PPPOE_PASSWORD/${{ secrets.PPPOE_PASSWORD }}/g" files/etc/config/network
+          make defconfig
+
+      - name: Make download with aria2
+        run: |
+          cd openwrt
+          make -j $(($(nproc)+1)) download DLAGENTS="https https = /usr/bin/aria2c -c -x 16 -s 16 -k 1M"
+
+      - name: Make World
+        run: |
+          cd openwrt
+          make -j $(($(nproc)+1)) V=s
+
+      - name: Upload image to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./openwrt/bin/targets/rockchip/armv8/openwrt-rockchip-armv8-friendlyarm_nanopi-r2s-squashfs-sysupgrade.img.gz
+          asset_name: r2s-openwrt-${{ vars.BRANCH }}-squashfs-sysupgrade.img.gz
+          tag: release
+          overwrite: true

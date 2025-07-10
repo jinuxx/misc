@@ -1,0 +1,34 @@
+
+config init
+	option stdout '1'
+	option stderr '1'
+	option user 'root'
+	option group 'root'
+	option respawn '1'
+
+config conf 'common'
+	option server_addr '175.27.157.169'
+	option server_port '57000'
+	option token 'FRP_TOKEN'
+	option user 'r2s'
+	option tls_enable 'false'
+	option login_fail_exit 'false'
+
+config conf 'ssh'
+	option type 'tcp'
+	option local_ip '10.10.10.1'
+	option local_port '22'
+	option remote_port '20023'
+	option name 'router.ssh'
+	option use_encryption 'true'
+	option use_compression 'true'
+
+config conf
+	option name 'ubuntu'
+	option type 'tcp'
+	option use_encryption 'true'
+	option use_compression 'true'
+	option local_ip '10.10.10.10'
+	option local_port '22'
+	option remote_port '10023'
+
