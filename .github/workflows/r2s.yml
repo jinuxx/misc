@@ -22,7 +22,12 @@ jobs:
           cd openwrt
           git pull 
           git checkout v24.10.1
+          echo "---- 1"
           ./scripts/feeds update -a
+          echo "---- 2"
           ./scripts/feeds install -a
+          echo "---- 3"
           cp ../r2s.config ./.config
+          echo "---- 4"
           make -j$(nproc)
+          echo "---- 5"
