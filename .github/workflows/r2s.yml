@@ -25,10 +25,7 @@ jobs:
       
       - name: pull code
         run: |
-          git clone https://git.openwrt.org/openwrt/openwrt.git
-          cd openwrt
-          git pull
-          git checkout openwrt-${{ github.event.inputs.openwrt_branch }}
+          git clone --branch openwrt-24.10 --depth 1 https://git.openwrt.org/openwrt/openwrt.git
 
       - name: Prepare feed for make config
         run: |
