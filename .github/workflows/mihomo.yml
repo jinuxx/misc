@@ -27,16 +27,17 @@ jobs:
       - name: Fetch asset URL from Prerelease-Alpha
         id: fetch
         run: |
-          API_URL="https://api.github.com/repos/vernesong/mihomo/releases/tags/Prerelease-Alpha"
-          JSON=$(curl -s "$API_URL")
+          # 获取 release 的 JSON 数据
+          JSON=$(gh release view Prerelease-Alpha --repo vernesong/mihomo --json assets)
 
+          # 提取匹配文件名和下载链接
           ORIGIN_NAME=$(echo "$JSON" | jq -r '.assets[] 
             | select(.name | test("^mihomo-linux-arm64-alpha-smart-.*\\.gz$")) 
             | .name')
 
           DOWNLOAD_URL=$(echo "$JSON" | jq -r '.assets[] 
             | select(.name | test("^mihomo-linux-arm64-alpha-smart-.*\\.gz$")) 
-            | .browser_download_url')
+            | .url')
 
           echo "Name: $ORIGIN_NAME"
           echo "Download URL: $DOWNLOAD_URL"
