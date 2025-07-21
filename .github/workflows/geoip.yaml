@@ -23,7 +23,10 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
       - name: Checkout geoip repo
-        run: gh repo clone Loyalsoldier/geoip
+        uses: actions/checkout@v4
+        with:
+          repository: Loyalsoldier/geoip
+          path: geoip
 
       - name: Set up Go
         uses: actions/setup-go@v5

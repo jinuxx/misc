@@ -1,0 +1,66 @@
+name: Build geosite.dat
+on:
+  workflow_dispatch:
+  # schedule:
+  #   # 每天凌晨 5:20（北京时间），等于 UTC 的 21:20 前一天
+  #   - cron: "20 21 * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout codebase
+        uses: actions/checkout@v4
+
+      - name: Checkout v2fly/domain-list-community
+        uses: actions/checkout@v4
+        with:
+          repository: v2fly/domain-list-community
+          path: code
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: code/go.mod
+
+      - name: Append attribute rules
+        run: |
+          CHINA_DOMAINS_URL=https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaMax/ChinaMax_Domain.txt
+          curl -sSL ${CHINA_DOMAINS_URL} | sed '/^\s*#/d' | sed '/^[^\.]/ s/^/full:/' |  sed 's/^\.\([^.]*\)/\1/' > temp-direct.txt
+          # 这里做修改，应该已经囊括了大部分的网站了
+
+      - name: Build dlc.dat file
+        run: |
+          cd code || exit 1
+          go run ./ --outputdir=../
+          cd ../ && rm -rf code
+
+      - name: Authenticate gh CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Create release with current date tag
+        run: |
+          mv dlc.dat ./geosite.dat
+          cp ./geosite.dat ./geosite-$(date +%Y%m%d).dat
+          gh release upload geosite --clobber ./geosite-$(date +%Y%m%d).dat
+          gh release upload release --clobber ./geosite.dat
+
+      - name: Clean up old assets in release
+        run: |
+          TAG=geosite
+          # Get all assets for the geoip tag, sorted by created_at (newest first)
+          assets=$(gh api repos/{owner}/{repo}/releases/tags/$TAG --jq '.assets | sort_by(.created_at) | reverse')
+
+          # Count total assets
+          asset_count=$(echo "$assets" | jq length)
+
+          # If more than 5 assets, delete the oldest ones
+          if [ "$asset_count" -gt 5 ]; then
+            echo "Found $asset_count assets, keeping newest 5, deleting the rest"
+            echo "$assets" | jq -r '.[5:][] | .name' | while read -r asset_name; do
+              echo "Deleting asset name: $asset_name"
+              gh release delete-asset $TAG "$asset_name" -y
+            done
+          else
+            echo "Found $asset_count assets (5 or fewer), no assets will be deleted"
+          fi
