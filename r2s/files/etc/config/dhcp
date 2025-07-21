@@ -18,15 +18,14 @@ config dnsmasq
 	option strictorder '1'
 	option max_cache_ttl '100'
 	option dhcpleasemax '100'
+	option sequential_ip '1'
 
 config dhcp 'lan'
 	option interface 'lan'
-	option start '150'
-	option limit '50'
+	option start '110'
+	option limit '70'
 	option leasetime '12h'
 	option dhcpv4 'server'
-	list ra_flags 'managed-config'
-	list ra_flags 'other-config'
 
 config dhcp 'wan'
 	option interface 'wan'
@@ -45,17 +44,23 @@ config host
 	list mac '00:E0:B4:19:5F:F9'
 
 config host
-	option name 'yue-de-S24'
+	option name 'XBOX'
+	option ip '10.10.10.55'
+	list mac 'D8:E2:DF:49:28:47'
+	option leasetime '7d'
+
+config host
+	option name 'Yue-de-S24'
 	option ip '10.10.10.66'
 	option leasetime 'infinite'
 	list mac '2E:17:2E:A8:82:BD'
 	list mac '2A:DB:7B:F8:7F:5E'
 
 config host
-	option name 'C3P0'
-	option ip '10.10.10.99'
-	option leasetime 'infinite'
-	list mac 'E0:D5:5E:86:AC:C0'
+	option name 'iPad'
+	option ip '10.10.10.77'
+	list mac 'DA:69:86:CE:B8:27'
+	option leasetime '7d'
 
 config host
 	option name 'Jin-de-s23'
@@ -65,38 +70,85 @@ config host
 	list mac '98:0D:6F:F2:23:70'
 
 config host
+	option name 'C3P0'
+	option ip '10.10.10.99'
+	option leasetime 'infinite'
+	list mac 'E0:D5:5E:86:AC:C0'
+
+config host
+	option name 'Tplink-ap'
+	list mac 'F4:6D:2F:9B:20:C8'
+	option ip '10.10.10.100'
+	option leasetime 'infinite'
+
+config host
 	option name 'TVbox'
 	option ip '10.10.10.201'
 	option leasetime 'infinite'
 	list mac '9C:62:AB:D8:A8:23'
 
 config host
-	option name 'elec.pot'
-	option ip '10.10.10.240'
+	option name 'Elec.pot'
+	option ip '10.10.10.230'
 	option leasetime '7d'
 	list mac 'D4:84:57:13:F2:73'
 
 config host
-	option name 'washing.machine'
-	option ip '10.10.10.241'
+	option name 'Washing.machine'
+	option ip '10.10.10.231'
 	option leasetime '7d'
 	list mac '04:D6:F4:16:66:EC'
 
 config host
 	option name 'AC.livingroom'
-	option ip '10.10.10.242'
+	option ip '10.10.10.232'
 	option leasetime '7d'
 	list mac '34:5B:BB:1E:71:96'
 
 config host
-	option name 'fridge'
-	option ip '10.10.10.243'
+	option name 'Fridge'
+	option ip '10.10.10.233'
 	option leasetime '7d'
 	list mac 'F0:C9:D1:03:58:22'
 
 config host
-	option name 'air.fry'
-	option ip '10.10.10.244'
+	option name 'Air.fry'
+	option ip '10.10.10.234'
 	option leasetime '7d'
 	list mac '88:F2:BD:7B:E1:8C'
 
+config host
+	option name 'AC1'
+	option ip '10.10.10.235'
+	list mac 'F0:C9:D1:18:46:29'
+	option leasetime '7d'
+
+config host
+	option name 'AC2'
+	option ip '10.10.10.236'
+	list mac 'F0:C9:D1:13:F3:38'
+	option leasetime '7d'
+
+config host
+	option name 'Mi-plug'
+	option ip '10.10.10.237'
+	list mac '68:AB:BC:5C:CF:33'
+	option leasetime '7d'
+
+config host
+	option name 'Camera.ys'
+	option ip '10.10.10.238'
+	list mac '10:2D:41:E9:39:70'
+	option leasetime '7d'
+
+config host
+	option name 'Camera.door'
+	list mac 'F8:6F:B0:73:26:B1'
+	option ip '10.10.10.239'
+	option leasetime '7d'
+
+config host
+	option name 'Dreame'
+	option ip '10.10.10.240'
+	list mac 'E8:6B:EA:75:36:04'
+	option leasetime '7d'

@@ -36,4 +36,3 @@ config interface 'wan'
 	option username 'PPPOE_USERNAME'
 	option password 'PPPOE_PASSWORD'
 	option ipv6 '0'
-
