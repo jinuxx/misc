@@ -1,0 +1,60 @@
+name: Mihomo Smart LightGBM armbian
+
+on:
+  schedule:
+    # 每周六凌晨 3 点 15 分（北京时间），等于 UTC 的 19:15 前一天
+    - cron: "15 19 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: pip install pandas==2.2.3 scikit-learn==1.7.0 lightgbm==3.3.5 joblib==1.5.1 numpy==2.3.1
+
+    - name: Download
+      run: |
+        cd lightgbm
+        wget -O smart_weight_data.csv https://highflyingbird.ink/api/smart_weight_data_armbian.csv
+        wget -O transform.go https://raw.githubusercontent.com/vernesong/mihomo/refs/heads/Alpha/component/smart/lightgbm/transform.go
+        python train_flexible.py
+    
+    - name: Authenticate gh CLI
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+    - name: Create release with current date tag
+      run: |
+        TAG=LightGBM
+        mv lightgbm/Model.bin ./Model-A.bin
+        cp ./Model-A.bin ./Model-A-$(date +%Y%m%d).bin
+        gh release upload $TAG --clobber ./Model-A-$(date +%Y%m%d).bin
+        gh release upload release --clobber ./Model-A.bin
+        echo "TAG=$TAG" >> $GITHUB_ENV
+
+    - name: Clean up old assets in release
+      run: |
+        # Get all assets for the geoip tag, sorted by created_at (newest first)
+        assets=$(gh api repos/{owner}/{repo}/releases/tags/${{ env.TAG }} --jq '.assets | sort_by(.created_at) | reverse')
+
+        # Count total assets
+        asset_count=$(echo "$assets" | jq length)
+
+        # If more than 8 assets, delete the oldest ones
+        if [ "$asset_count" -gt 8 ]; then
+          echo "Found $asset_count assets, keeping newest 8, deleting the rest"
+          echo "$assets" | jq -r '.[8:][] | .name' | while read -r asset_name; do
+            echo "Deleting asset name: $asset_name"
+            gh release delete-asset ${{ env.TAG }} "$asset_name" -y
+          done
+        else
+          echo "Found $asset_count assets (8 or fewer), no assets will be deleted"
+        fi

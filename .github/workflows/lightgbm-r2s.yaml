@@ -1,9 +1,9 @@
-name: Mihomo Smart LightGBM train
+name: Mihomo Smart LightGBM r2s
 
 on:
   schedule:
     # 每周六凌晨 3 点（北京时间），等于 UTC 的 19:00 前一天
-    - cron: "0 19 * * SAT"
+    - cron: "0 19 */3 * *"
   workflow_dispatch:
 
 jobs:
@@ -14,17 +14,17 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up Python 3.11
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v8
       with:
         python-version: '3.11'
     
     - name: Install dependencies
-      run: pip install pandas==2.2.3 scikit-learn==1.7.0 lightgbm==3.3.5 joblib==1.5.1 numpy==2.3.1
+      run: pip install pandas==2.2.3 scikit-learn==1.7.0 lightgbm==3.3.8 joblib==1.8.1 numpy==2.3.1
 
     - name: Download
       run: |
         cd lightgbm
-        wget -O smart_weight_data.csv https://highflyingbird.ink/BPC9YV7QASDQPC/
+        wget -O smart_weight_data.csv https://highflyingbird.ink/api/smart_weight_data.csv
         wget -O transform.go https://raw.githubusercontent.com/vernesong/mihomo/refs/heads/Alpha/component/smart/lightgbm/transform.go
         python train_flexible.py
     
@@ -48,13 +48,13 @@ jobs:
         # Count total assets
         asset_count=$(echo "$assets" | jq length)
 
-        # If more than 5 assets, delete the oldest ones
-        if [ "$asset_count" -gt 5 ]; then
-          echo "Found $asset_count assets, keeping newest 5, deleting the rest"
-          echo "$assets" | jq -r '.[5:][] | .name' | while read -r asset_name; do
+        # If more than 8 assets, delete the oldest ones
+        if [ "$asset_count" -gt 8 ]; then
+          echo "Found $asset_count assets, keeping newest 8, deleting the rest"
+          echo "$assets" | jq -r '.[8:][] | .name' | while read -r asset_name; do
             echo "Deleting asset name: $asset_name"
             gh release delete-asset ${{ env.TAG }} "$asset_name" -y
           done
         else
-          echo "Found $asset_count assets (5 or fewer), no assets will be deleted"
+          echo "Found $asset_count assets (8 or fewer), no assets will be deleted"
         fi
