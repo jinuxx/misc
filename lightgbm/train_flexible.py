@@ -138,7 +138,7 @@ def main():
     print("--- Mihomo 模型训练开始 ---")
 
     try:
-        parser = GoTransformParser(GO_FILE)
+        parser = GoTransformParser(GO_FILE) # 准备 transform.go 文件
         feature_order = parser.get_feature_order()
     except Exception as e:
         print(f"初始化失败: {e}")

@@ -25,7 +25,7 @@ jobs:
       run: |
         cd lightgbm
         wget -O smart_weight_data.csv https://highflyingbird.ink/BPC9YV7QASDQPC/
-        echo `ls -htl`
+        wget -O transform.go https://raw.githubusercontent.com/vernesong/mihomo/refs/heads/Alpha/component/smart/lightgbm/transform.go
         python train_flexible.py
     
     - name: Authenticate gh CLI
