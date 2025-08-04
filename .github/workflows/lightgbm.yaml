@@ -1,6 +1,9 @@
 name: Mihomo Smart LightGBM train
 
 on:
+  schedule:
+    # 每周六凌晨 3 点（北京时间），等于 UTC 的 21:00 前一天
+    - cron: "0 19 * * SAT"
   workflow_dispatch:
 
 jobs:
@@ -21,6 +24,7 @@ jobs:
     - name: Download
       run: |
         cd lightgbm
+        wget -O smart_weight_data.csv https://highflyingbird.ink/BPC9YV7QASDQPC/
         python train_flexible.py
     
     - name: Authenticate gh CLI
