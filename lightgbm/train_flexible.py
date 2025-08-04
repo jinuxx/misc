@@ -39,7 +39,7 @@ def load_and_clean_data(file_path: str) -> Optional[pd.DataFrame]:
     """从CSV文件加载数据并进行清洗。如果失败则返回None。"""
     print(f"--> 正在加载数据: {file_path}")
     try:
-        data = pd.read_csv(file_path)
+        data = pd.read_csv(file_path, on_bad_lines='skip')
         print(f"    原始数据加载成功，共 {len(data)} 条。")
     except FileNotFoundError:
         print(f"    错误: 数据文件 '{file_path}' 未找到!")
