@@ -35,23 +35,24 @@ jobs:
         run: |
           mv ./geoip-config.json geoip/config.json && cd geoip
           go build ./
-          ./geoip convert -c ./config.json
+          ./geoip convert -c ./config.json  # Convert geoip data from one format to another by using config file
 
       - name: Authenticate gh CLI
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
       - name: Create release with current date tag
         run: |
+          TAG=geoip
           mv geoip/output/geoip-only-cn-telegram-private.dat ./
           cp ./geoip-only-cn-telegram-private.dat ./geoip-only-cn-telegram-private-$(date +%Y%m%d).dat
-          gh release upload geoip --clobber ./geoip-only-cn-telegram-private-$(date +%Y%m%d).dat
+          gh release upload ${TAG} --clobber ./geoip-only-cn-telegram-private-$(date +%Y%m%d).dat
           gh release upload release --clobber ./geoip-only-cn-telegram-private.dat
+          echo "TAG=$TAG" >> $GITHUB_ENV
 
       - name: Clean up old assets in release
         run: |
-          TAG=geoip
           # Get all assets for the geoip tag, sorted by created_at (newest first)
-          assets=$(gh api repos/{owner}/{repo}/releases/tags/$TAG --jq '.assets | sort_by(.created_at) | reverse')
+          assets=$(gh api repos/{owner}/{repo}/releases/tags/${{ env.TAG }} --jq '.assets | sort_by(.created_at) | reverse')
 
           # Count total assets
           asset_count=$(echo "$assets" | jq length)
@@ -61,7 +62,7 @@ jobs:
             echo "Found $asset_count assets, keeping newest 5, deleting the rest"
             echo "$assets" | jq -r '.[5:][] | .name' | while read -r asset_name; do
               echo "Deleting asset name: $asset_name"
-              gh release delete-asset $TAG "$asset_name" -y
+              gh release delete-asset ${{ env.TAG }} "$asset_name" -y
             done
           else
             echo "Found $asset_count assets (5 or fewer), no assets will be deleted"

@@ -55,11 +55,33 @@ jobs:
           cd openwrt
           make -j $(($(nproc)+1)) V=s
 
-      - name: Upload image to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./openwrt/bin/targets/rockchip/armv8/openwrt-rockchip-armv8-friendlyarm_nanopi-r2s-squashfs-sysupgrade.img.gz
-          asset_name: r2s-openwrt-${{ github.event.inputs.branch }}-squashfs-sysupgrade.img.gz
-          tag: release
-          overwrite: true
+      - name: Authenticate gh CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Create release with current date tag
+        run: |
+          TAG=R2S
+          mv ./openwrt/bin/targets/rockchip/armv8/openwrt-rockchip-armv8-friendlyarm_nanopi-r2s-squashfs-sysupgrade.img.gz ./r2s-openwrt-${{ github.event.inputs.branch }}-squashfs-sysupgrade.img.gz
+          cp ./r2s-openwrt-${{ github.event.inputs.branch }}-squashfs-sysupgrade.img.gz ./r2s-openwrt-${{ github.event.inputs.branch }}-squashfs-sysupgrade-$(date +%Y%m%d)..img.gz
+          gh release upload $TAG --clobber ./r2s-openwrt-${{ github.event.inputs.branch }}-squashfs-sysupgrade-$(date +%Y%m%d)..img.gz
+          gh release upload release --clobber ./r2s-openwrt-${{ github.event.inputs.branch }}-squashfs-sysupgrade.img.gz
+          echo "TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Clean up old assets in release
+        run: |
+          # Get all assets for the geoip tag, sorted by created_at (newest first)
+          assets=$(gh api repos/{owner}/{repo}/releases/tags/${{ env.TAG }} --jq '.assets | sort_by(.created_at) | reverse')
+
+          # Count total assets
+          asset_count=$(echo "$assets" | jq length)
+
+          # If more than 5 assets, delete the oldest ones
+          if [ "$asset_count" -gt 5 ]; then
+            echo "Found $asset_count assets, keeping newest 5, deleting the rest"
+            echo "$assets" | jq -r '.[5:][] | .name' | while read -r asset_name; do
+              echo "Deleting asset name: $asset_name"
+              gh release delete-asset ${{ env.TAG }} "$asset_name" -y
+            done
+          else
+            echo "Found $asset_count assets (5 or fewer), no assets will be deleted"
+          fi

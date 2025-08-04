@@ -64,14 +64,15 @@ jobs:
       - name: Create release with current date tag
         if: steps.check_asset.outputs.found == 'false'
         run: |
-          gh release upload mihomo --clobber "$ORIGIN_NAME"
+          TAG=mihomo
+          gh release upload ${TAG} --clobber "$ORIGIN_NAME"
           gh release upload release --clobber mihomo-linux-arm64-alpha-smart.gz
+          echo "TAG=$TAG" >> $GITHUB_ENV
 
       - name: Clean up old assets in release
         run: |
-          TAG=mihomo
           # Get all assets for the geoip tag, sorted by created_at (newest first)
-          assets=$(gh api repos/{owner}/{repo}/releases/tags/$TAG --jq '.assets | sort_by(.created_at) | reverse')
+          assets=$(gh api repos/{owner}/{repo}/releases/tags/${{ env.TAG }} --jq '.assets | sort_by(.created_at) | reverse')
 
           # Count total assets
           asset_count=$(echo "$assets" | jq length)
@@ -81,7 +82,7 @@ jobs:
             echo "Found $asset_count assets, keeping newest 5, deleting the rest"
             echo "$assets" | jq -r '.[5:][] | .name' | while read -r asset_name; do
               echo "Deleting asset name: $asset_name"
-              gh release delete-asset $TAG "$asset_name" -y
+              gh release delete-asset ${{ env.TAG }} "$asset_name" -y
             done
           else
             echo "Found $asset_count assets (5 or fewer), no assets will be deleted"
