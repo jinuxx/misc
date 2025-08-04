@@ -1,0 +1,55 @@
+name: Mihomo Smart LightGBM train
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: pip install pandas==2.2.3 scikit-learn==1.7.0 lightgbm==3.3.5 joblib==1.5.1 numpy==2.3.1
+
+    - name: Download
+      run: |
+        cd lightgbm
+        python train_flexible.py
+    
+    - name: Authenticate gh CLI & Declare TAG
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+    - name: Create release with current date tag
+      run: |
+        TAG=LightGBM
+        mv lightgbm/Model.bin ./
+        cp ./Model.bin ./Model-$(date +%Y%m%d).bin
+        gh release upload $TAG --clobber ./Model-$(date +%Y%m%d).bin
+        gh release upload release --clobber ./Model.bin
+        echo "TAG=$TAG" >> $GITHUB_ENV
+
+    - name: Clean up old assets in release
+      run: |
+        # Get all assets for the geoip tag, sorted by created_at (newest first)
+        assets=$(gh api repos/{owner}/{repo}/releases/tags/${{ env.TAG }} --jq '.assets | sort_by(.created_at) | reverse')
+
+        # Count total assets
+        asset_count=$(echo "$assets" | jq length)
+
+        # If more than 5 assets, delete the oldest ones
+        if [ "$asset_count" -gt 5 ]; then
+          echo "Found $asset_count assets, keeping newest 5, deleting the rest"
+          echo "$assets" | jq -r '.[5:][] | .name' | while read -r asset_name; do
+            echo "Deleting asset name: $asset_name"
+            gh release delete-asset ${{ env.TAG }} "$asset_name" -y
+          done
+        else
+          echo "Found $asset_count assets (5 or fewer), no assets will be deleted"
+        fi

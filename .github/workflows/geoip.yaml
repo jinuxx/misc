@@ -19,9 +19,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq gh
 
-      - name: Authenticate gh CLI
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-
       - name: Checkout geoip repo
         uses: actions/checkout@v4
         with:
@@ -39,6 +36,9 @@ jobs:
           mv ./geoip-config.json geoip/config.json && cd geoip
           go build ./
           ./geoip convert -c ./config.json
+
+      - name: Authenticate gh CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
       - name: Create release with current date tag
         run: |
