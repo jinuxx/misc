@@ -1,4 +1,4 @@
-name: R2S OpenWrt Build
+name: r2s openwrt build
 
 on:
   workflow_dispatch:

@@ -1,4 +1,4 @@
-name: GeoIP Dat Build
+name: geoip.dat build
 on:
   workflow_dispatch:
   schedule:

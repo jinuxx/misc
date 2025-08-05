@@ -1,4 +1,4 @@
-name: Build geosite.dat
+name: geosite.dat build
 on:
   workflow_dispatch:
   # schedule:
