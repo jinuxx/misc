@@ -2,8 +2,8 @@ name: mihomo smart model.bin armbian
 
 on:
   schedule:
-    # 每三天凌晨 3 点 15 分（北京时间），等于 UTC 的 19:15 前一天
-    - cron: "15 19 */3 * *"
+    # 每天凌晨 3 点 15 分（北京时间），等于 UTC 的 19:15 前一天
+    - cron: "15 19 * * *"
   workflow_dispatch:
 
 jobs:
