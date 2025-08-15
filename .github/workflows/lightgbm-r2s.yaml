@@ -24,7 +24,7 @@ jobs:
     - name: Download
       run: |
         cd lightgbm
-        wget -O smart_weight_data.csv https://highflyingbird.ink/files/smart_weight_data.csv
+        wget -O smart_weight_data.csv https://highflyingbird.ink/echo/smart_weight_data.csv
         wget -O transform.go https://raw.githubusercontent.com/vernesong/mihomo/refs/heads/Alpha/component/smart/lightgbm/transform.go
         python train_flexible.py
     
