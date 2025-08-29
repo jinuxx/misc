@@ -1,10 +1,19 @@
-name: mihomo smart core arm64 update
+name: mihomo core arm64 update
 
 on:
   schedule:
     # 每天凌晨 5:30 点（北京时间），等于 UTC 的 21:00 前一天
     - cron: "30 21 * * *"
   workflow_dispatch:
+    inputs:
+      repo:
+        type: choice
+        required: true
+        description: 选择仓库
+        default: MetaCubeX
+        options:
+          - MetaCubeX
+          - vernesong
 
 jobs:
   build:
@@ -28,15 +37,15 @@ jobs:
         id: fetch
         run: |
           # 获取 release 的 JSON 数据
-          JSON=$(gh release view Prerelease-Alpha --repo vernesong/mihomo --json assets)
+          JSON=$(gh release view Prerelease-Alpha --repo ${{ github.event.inputs.repo }}/mihomo --json assets)
 
           # 提取匹配文件名和下载链接
           ORIGIN_NAME=$(echo "$JSON" | jq -r '.assets[] 
-            | select(.name | test("^mihomo-linux-arm64-alpha-smart-.*\\.gz$")) 
+            | select(.name | test("^mihomo-linux-arm64-alpha(-smart)?-.*\\.gz$")) 
             | .name')
 
           DOWNLOAD_URL=$(echo "$JSON" | jq -r '.assets[] 
-            | select(.name | test("^mihomo-linux-arm64-alpha-smart-.*\\.gz$")) 
+            | select(.name | test("^mihomo-linux-arm64-alpha(-smart)?-.*\\.gz$")) 
             | .url')
 
           echo "Name: $ORIGIN_NAME"
@@ -59,14 +68,14 @@ jobs:
         if: steps.check_asset.outputs.found == 'false'
         run: |
           curl -L -o "$ORIGIN_NAME" "$DOWNLOAD_URL"
-          cp "$ORIGIN_NAME" mihomo-linux-arm64-alpha-smart.gz
+          cp "$ORIGIN_NAME" mihomo-linux-arm64-alpha.gz
 
       - name: Create release with current date tag
         if: steps.check_asset.outputs.found == 'false'
         run: |
           TAG=mihomo
           gh release upload $TAG --clobber "$ORIGIN_NAME"
-          gh release upload release --clobber mihomo-linux-arm64-alpha-smart.gz
+          gh release upload release --clobber mihomo-linux-arm64-alpha.gz
           echo "TAG=$TAG" >> $GITHUB_ENV
 
       - name: Clean up old assets in release

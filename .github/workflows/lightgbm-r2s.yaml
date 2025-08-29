@@ -1,9 +1,9 @@
 name: mihomo smart model.bin r2s
 
 on:
-  schedule:
-    # 默认时区 UTC 所以要根据北京时间 -8 个小时
-    - cron: "0 19 * * *"
+  # 默认时区 UTC 所以要根据北京时间 -8 个小时
+  # schedule:
+    # - cron: "0 19 * * *"
   workflow_dispatch:
 
 jobs:
