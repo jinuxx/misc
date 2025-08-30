@@ -1,10 +1,11 @@
 name: mihomo core arm64 update
 
 on:
+  workflow_dispatch:
   schedule:
     # 每天凌晨 5:30 点（北京时间），等于 UTC 的 21:00 前一天
     - cron: "30 21 * * *"
-
+  
 jobs:
   build:
     runs-on: ubuntu-latest
