@@ -4,16 +4,6 @@ on:
   schedule:
     # 每天凌晨 5:30 点（北京时间），等于 UTC 的 21:00 前一天
     - cron: "30 21 * * *"
-  workflow_dispatch:
-    inputs:
-      repo:
-        type: choice
-        required: true
-        description: 选择仓库
-        default: MetaCubeX
-        options:
-          - MetaCubeX
-          - vernesong
 
 jobs:
   build:
@@ -37,7 +27,7 @@ jobs:
         id: fetch
         run: |
           # 获取 release 的 JSON 数据
-          JSON=$(gh release view Prerelease-Alpha --repo ${{ inputs.repo || 'MetaCubeX' }}/mihomo --json assets)
+          JSON=$(gh release view Prerelease-Alpha --repo ${{ vars.MIHOMO_REPO }}/mihomo --json assets)
 
           # 提取匹配文件名和下载链接
           ORIGIN_NAME=$(echo "$JSON" | jq -r '.assets[] 
