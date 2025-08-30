@@ -37,7 +37,7 @@ jobs:
         id: fetch
         run: |
           # 获取 release 的 JSON 数据
-          JSON=$(gh release view Prerelease-Alpha --repo ${{ inputs.repo || MetaCubeX }}/mihomo --json assets)
+          JSON=$(gh release view Prerelease-Alpha --repo ${{ inputs.repo || 'MetaCubeX' }}/mihomo --json assets)
 
           # 提取匹配文件名和下载链接
           ORIGIN_NAME=$(echo "$JSON" | jq -r '.assets[] 
