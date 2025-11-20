@@ -1,0 +1,108 @@
+name: Get Xray-linux-64 from main
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"   # 每 6 小时检查一次
+
+jobs:
+  get-artifact:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Fetch + pick artifact (inline)
+        id: find
+        run: |
+          artifact_json=$(
+          curl -sS \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/XTLS/Xray-core/actions/artifacts?name=Xray-linux-64&page=1" \
+          | jq -c '
+              .artifacts
+              | map(select(.workflow_run.head_branch == "main"))
+              | sort_by(.expires_at)      # 升序
+              | reverse                   # 变成倒序（最新的在前面）
+              | first                      # 取第一个
+            '
+          )
+
+          artifact_id=$(echo "$artifact_json" | jq -r '.id // empty')
+          created_at=$(echo "$artifact_json" | jq -r '.created_at // empty')
+
+          echo "artifact_id=$artifact_id" >> $GITHUB_OUTPUT
+          echo "created_at=$created_at" >> $GITHUB_OUTPUT
+
+      
+      - name: Check if created_at is today (UTC)
+        id: check_created
+        run: |
+          created_at="${{ steps.find.outputs.created_at }}"
+
+          # 提取日期部分
+          created_date=$(echo "$created_at" | cut -d'T' -f1)
+
+          # 今天的 UTC 日期
+          today=$(date -u +%Y-%m-%d)
+
+          echo "Artifact created_at: $created_date"
+          echo "Today (UTC):         $today"
+
+          if [ "$created_date" = "$today" ]; then
+            echo "creates_today=true" >> $GITHUB_OUTPUT
+          else
+            echo "creates_today=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download artifact using official GitHub API
+        if: steps.check_created.outputs.creates_today == 'true'
+        id: download
+        run: |
+          artifact_id=${{ steps.find.outputs.artifact_id }}
+          echo "Downloading artifact ID: $artifact_id"
+          curl -L \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/XTLS/Xray-core/actions/artifacts/${artifact_id}/zip" \
+            -o Xray-linux-64.zip
+
+          cp Xray-linux-64.zip Xray-linux-64-$(date -u +%Y-%m-%d).zip
+
+          echo "ORIGIN_NAME=Xray-linux-64-$(date -u +%Y-%m-%d).zip" >> $GITHUB_ENV
+          
+      - name: Authenticate gh CLI
+        if: steps.check_created.outputs.creates_today == 'true'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Create release with current date tag
+        if: steps.check_created.outputs.creates_today == 'true'
+        run: |
+          TAG=xray-core
+          gh release upload jinuxx/misc "$TAG" --clobber "$ORIGIN_NAME"
+          gh release upload jinuxx/misc release --clobber Xray-linux-64.zip
+          echo "TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Clean up old assets in release
+        if: steps.check_created.outputs.creates_today == 'true'
+        run: |
+          # Get all assets for the tag, sorted by created_at (newest first)
+          assets=$(gh api repos/{owner}/{repo}/releases/tags/${{ env.TAG }} --jq '.assets | sort_by(.created_at) | reverse')
+          echo
+          # Count total assets
+          asset_count=$(echo "$assets" | jq length)
+
+          # If more than 5 assets, delete the oldest ones
+          if [ "$asset_count" -gt 5 ]; then
+            echo "Found $asset_count assets, keeping newest 5, deleting the rest"
+            echo "$assets" | jq -r '.[5:][] | .name' | while read -r asset_name; do
+              echo "Deleting asset name: $asset_name"
+              gh release delete-asset ${{ env.TAG }} "$asset_name" -y
+            done
+          else
+            echo "Found $asset_count assets (5 or fewer), no assets will be deleted"
+          fi
+
