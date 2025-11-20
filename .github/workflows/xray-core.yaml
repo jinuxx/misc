@@ -1,0 +1,98 @@
+name: Get Xray-linux-64 from main
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "45 20 * * *"
+
+jobs:
+  get-artifact:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Fetch & select artifact
+        id: find
+        run: |
+          artifact_json=$(
+            curl -sSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/XTLS/Xray-core/actions/artifacts?name=Xray-linux-arm64-v8a&page=1" \
+            | jq -c '
+                (.artifacts // [])
+                | map(select(.workflow_run.head_branch == "main"))
+                | sort_by(.expires_at)
+                | reverse
+                | first
+              '
+          )
+
+          if [ -z "$artifact_json" ] || [ "$artifact_json" = "null" ]; then
+            echo "No matching artifact found — exit."
+            exit 0
+          fi
+
+          artifact_id=$(echo "$artifact_json" | jq -r '.id')
+          created_at=$(echo "$artifact_json" | jq -r '.created_at')
+
+          created_date=$(echo "$created_at" | cut -d'T' -f1)
+          today=$(date -u +%Y-%m-%d)
+
+          echo "Artifact date: $created_date, Today: $today"
+
+          if [ "$created_date" != "$today" ]; then
+            echo "Artifact is not from today — exit."
+            exit 0
+          fi
+
+          echo "artifact_id=$artifact_id" >> $GITHUB_ENV
+
+      - name: Download artifact
+        run: |
+          echo "Downloading artifact: $artifact_id"
+          curl -sSL \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/XTLS/Xray-core/actions/artifacts/${artifact_id}/zip" \
+            -o Xray-linux-arm64-v8a.zip
+
+          out="Xray-linux-arm64-v8a-$(date -u +%Y-%m-%d).zip"
+          cp Xray-linux-arm64-v8a.zip "$out"
+          echo "ORIGIN_NAME=$out" >> $GITHUB_ENV
+
+      - name: Authenticate gh CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Upload assets to release
+        run: |
+          TAG=xray-core
+          echo "TAG=$TAG" >> $GITHUB_ENV
+
+          gh release upload "$TAG" "$ORIGIN_NAME" --clobber
+          gh release upload release Xray-linux-arm64-v8a.zip --clobber
+
+      - name: Delete old assets
+        run: |
+          TAG=${{ env.TAG }}
+
+          assets=$(gh api repos/{owner}/{repo}/releases/tags/$TAG \
+            --jq '.assets | sort_by(.created_at) | reverse')
+
+          count=$(echo "$assets" | jq length)
+
+          if [ "$count" -le 5 ]; then
+            echo "Only $count assets, skip clean."
+            exit 0
+          fi
+
+          echo "$assets" \
+            | jq -r '.[5:][] | .name' \
+            | while read -r asset_name; do
+                echo "Deleting $asset_name"
+                gh release delete-asset "$TAG" "$asset_name" -y
+              done
