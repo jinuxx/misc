@@ -2,8 +2,20 @@ name: Get Xray-linux-64 from main
 
 on:
   workflow_dispatch:
+    inputs:
+      target_date:
+        type: string
+        required: false
+        description: 目标更新日期（注意github action时区是UTC）
   schedule:
-    - cron: "45 20 * * *"
+    # xray-core客户端更新时间，配合两个时间（以下注释的时间全部是UTC+8，所以在cron里要对应-8）
+    # 每个都提前半个小时是因为 github action 的 schedule 是等待分配的，不会马上
+    # 1. 周一到周五的每天 7:30 -> 周日到周四的每天 23:00
+    - cron: "0 23 * * 0,1,2,3,4"
+    # 2. 周一到周五的每天 17:30 -> 周一到周五每天 9:00
+    - cron: "0 9 * * 1-5"
+    # 3. 周六到周日的每天 6:00 -> 周五周六每天 21:30
+    - cron: "30 21 * * 5,6"
 
 jobs:
   get-artifact:
@@ -32,28 +44,30 @@ jobs:
                 | first
               '
           )
-
-          if [ -z "$artifact_json" ] || [ "$artifact_json" = "null" ]; then
-            echo "No matching artifact found — exit."
-            exit 0
-          fi
-
           artifact_id=$(echo "$artifact_json" | jq -r '.id')
           created_at=$(echo "$artifact_json" | jq -r '.created_at')
-
           created_date=$(echo "$created_at" | cut -d'T' -f1)
-          today=$(date -u +%Y-%m-%d)
 
-          echo "Artifact date: $created_date, Today: $today"
-
-          if [ "$created_date" != "$today" ]; then
-            echo "Artifact is not from today — exit."
-            exit 0
+          # 如果用户没有输入 target_date，则使用今天（UTC）
+          if [ -z "${{ github.event.inputs.target_date }}"]; then
+            TARGET_DATE=$(date -u +%Y-%m-%d)
+          else
+            TARGET_DATE="${{ github.event.inputs.target_date }}"
           fi
 
-          echo "artifact_id=$artifact_id" >> $GITHUB_ENV
+          echo "Artifact date: $created_date, Targe_date: $TARGET_DATE"
+
+          # 是否为目标日期生成？
+          if [ "$created_date" = "$TARGET_DATE" ]; then
+            echo "artifact_id=$artifact_id" >> "$GITHUB_ENV"
+            echo "created_date=$created_date" >> "$GITHUB_ENV"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Download artifact
+        if: steps.find.outputs.found == 'true'
         run: |
           echo "Downloading artifact: $artifact_id"
           curl -sSL \
@@ -61,14 +75,16 @@ jobs:
             "https://api.github.com/repos/XTLS/Xray-core/actions/artifacts/${artifact_id}/zip" \
             -o Xray-linux-arm64-v8a.zip
 
-          out="Xray-linux-arm64-v8a-$(date -u +%Y-%m-%d).zip"
+          out="Xray-linux-arm64-v8a-$created_date.zip"
           cp Xray-linux-arm64-v8a.zip "$out"
           echo "ORIGIN_NAME=$out" >> $GITHUB_ENV
 
       - name: Authenticate gh CLI
+        if: steps.find.outputs.found == 'true'
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
       - name: Upload assets to release
+        if: steps.find.outputs.found == 'true'
         run: |
           TAG=xray-core
           echo "TAG=$TAG" >> $GITHUB_ENV
@@ -77,6 +93,7 @@ jobs:
           gh release upload release Xray-linux-arm64-v8a.zip --clobber
 
       - name: Delete old assets
+        if: steps.find.outputs.found == 'true'
         run: |
           TAG=${{ env.TAG }}
 
