@@ -1,0 +1,41 @@
+---
+name: mrs generator
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 19 * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout v2fly/domain-list-community
+        uses: actions/checkout@v4
+        with:
+          repository: v2fly/domain-list-community
+          ref: master
+          path: domain-list-community
+
+      - name: Convert
+        run: |
+          python3 mrs/convert.py
+
+      - name: Generate mrs files
+        run: |
+          wget https://github.com/MetaCubeX/mihomo/releases/download/v1.19.18/mihomo-linux-amd64-v1.19.18.gz
+          gzip -d mihomo-linux-amd64-v1.19.18.gz && mv mihomo-linux-amd64-v1.19.18 mihomo
+          chmod +x mihomo
+          ./mihomo convert-ruleset domain yaml mrs/cn.yaml cn.mrs
+          ./mihomo convert-ruleset domain yaml mrs/not-cn.yaml not-cn.mrs
+
+      - name: Authenticate gh CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Create release with current date tag
+        run: |
+          gh release upload release --clobber ./cn.mrs
+          gh release upload release --clobber ./not-cn.mrs
