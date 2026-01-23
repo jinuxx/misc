@@ -17,7 +17,7 @@ def main() -> None:
                 if len(line) == 0 or line.startswith('regexp:'):
                     continue
                 if line.startswith('include'):
-                    cn_include.append(line.split("#")[0].strip().replace('include:', ''))
+                    cn_include.append(line.split("#")[0].strip().replace('include:', '').replace(' @-!cn', ''))
                     continue
                 if '@' in line:
                     rule = line.split("@")[0].strip()
