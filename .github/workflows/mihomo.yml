@@ -43,13 +43,16 @@ jobs:
           JSON=$(gh release view Prerelease-Alpha --repo ${{ github.event.inputs.repo || vars.MIHOMO_REPO }}/mihomo --json assets)
 
           # 提取匹配文件名和下载链接
-          ORIGIN_NAME=$(echo "$JSON" | jq -r '.assets[] 
-            | select(.name | test("^mihomo-linux-arm64-alpha(-smart)?-.*\\.gz$")) 
-            | .name')
+          # 提取并按发布的时间排序，选择最新的那个文件
+          LATEST_FILE=$(echo "$JSON" | jq -r '
+            .assets
+            | map(select(.name | test("^mihomo-linux-arm64-alpha(-smart)?-.*\\.gz$")))
+            | sort_by(.updated_at) 
+            | last')
 
-          DOWNLOAD_URL=$(echo "$JSON" | jq -r '.assets[] 
-            | select(.name | test("^mihomo-linux-arm64-alpha(-smart)?-.*\\.gz$")) 
-            | .url')
+          # 提取文件名和下载链接
+          ORIGIN_NAME=$(echo "$LATEST_FILE" | jq -r '.name')
+          DOWNLOAD_URL=$(echo "$LATEST_FILE" | jq -r '.url')
 
           echo "Name: $ORIGIN_NAME"
           echo "Download URL: $DOWNLOAD_URL"
