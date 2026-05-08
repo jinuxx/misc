@@ -20,6 +20,13 @@ jobs:
           ref: master
           path: domain-list-community
 
+      - name: Checkout felixonmars/dnsmasq-china-list
+        uses: actions/checkout@v4
+        with:
+          repository: felixonmars/dnsmasq-china-list
+          ref: master
+          path: dnsmasq-china-list
+
       - name: Convert
         run: |
           python3 mrs/convert.py
@@ -31,6 +38,7 @@ jobs:
           chmod +x mihomo
           ./mihomo convert-ruleset domain yaml mrs/cn.yaml cn.mrs
           ./mihomo convert-ruleset domain yaml mrs/not-cn.yaml not-cn.mrs
+          ./mihomo convert-ruleset domain yaml mrs/accelerated-domains.yaml accelerated-domains.mrs
 
       - name: Authenticate gh CLI
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
@@ -39,3 +47,4 @@ jobs:
         run: |
           gh release upload release --clobber ./cn.mrs
           gh release upload release --clobber ./not-cn.mrs
+          gh release upload release --clobber ./accelerated-domains.mrs
