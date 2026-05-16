@@ -37,16 +37,14 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-          # turboacc
-          curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh --no-sfe
-
           # 合并配置
           cp -a ../r2s/. ./
           sed -i "s/FRP_TOKEN/${{ secrets.FRP_TOKEN }}/g" files/etc/config/frpc
           sed -i "s/PPPOE_USERNAME/${{ secrets.PPPOE_USERNAME }}/g" files/etc/config/network
           sed -i "s/PPPOE_PASSWORD/${{ secrets.PPPOE_PASSWORD }}/g" files/etc/config/network
           make defconfig
-          grep -E "CONFIG_PACKAGE_(frpc|luci-app-frpc|luci-app-turboacc)|CONFIG_TARGET_IMAGES_GZIP|CONFIG_IPV6|CONFIG_KERNEL_IPV6" .config || true
+          grep -E "CONFIG_PACKAGE_(frpc|luci-app-frpc|kmod-nf-flow|kmod-nft-offload|kmod-nft-fullcone|kmod-tcp-bbr)|CONFIG_TARGET_IMAGES_GZIP|CONFIG_IPV6|CONFIG_KERNEL_IPV6" .config || true
+          grep -q "^CONFIG_PACKAGE_kmod-nft-fullcone=y" .config || echo "::warning::kmod-nft-fullcone is not available in this OpenWrt ref; FullCone NAT will not be built."
 
       - name: Make download with aria2
         run: |
