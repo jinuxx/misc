@@ -22,7 +22,6 @@ config interface 'lan'
 	option proto 'static'
 	option ipaddr '10.10.10.1'
 	option netmask '255.255.255.0'
-	option ip6assign '60'
 	option ipv6 '0'
 	option delegate '0'
 
